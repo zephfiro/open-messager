@@ -24,4 +24,13 @@ class OutboxMessage extends Model
         'headers' => 'array',
         'sent_at' => 'datetime',
     ];
+
+    public function toProduce(): array {
+        return [
+            'topic'   => $this->topic,
+            'payload' => $this->payload,
+            'key'     => $this->event_id,
+            'headers' => $this->headers,
+        ];
+    }
 }

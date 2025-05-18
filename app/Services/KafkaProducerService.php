@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use RdKafka\Producer;
+use RdKafka\Conf;
 
 class KafkaProducerService
 {
@@ -14,13 +15,9 @@ class KafkaProducerService
      */
     public function __construct()
     {
-        $this->config   = config('kafka.producer');
-        $this->producer = new Producer();
+        $this->config = config('kafka.producer');
 
-        $this->producer->addBrokers($this->config['brokers']);
-        $this->producer->setConf(new \RdKafka\Conf());
-
-        $conf = $this->producer->getConf();
+        $conf = new Conf();
         $conf->set('acks', (string) $this->config['acks']);
         $conf->set('enable.idempotence', $this->config['enable_idempotence'] ? 'true' : 'false');
 
@@ -38,10 +35,11 @@ class KafkaProducerService
             }
         });
 
-        $this->producer->setConf($conf);
+        $this->producer = new Producer($conf);
+        $this->producer->addBrokers($this->config['brokers']);
     }
 
-    public function produce(string $topic, string $payload, string|null $key = null, array $headers = []): bool
+    public function produce(string $topic, array $payload, string|null $key = null, array $headers = []): bool
     {
         try {
             $topic = $this->producer->newTopic($topic);
@@ -51,7 +49,7 @@ class KafkaProducerService
                 $rdkafka_headers[] = (string) $key . '=' . (string) $value;
             }
 
-            $topic->produce(RD_KAFKA_PARTITION_UA, 0, $payload, $key, $rdkafka_headers);
+            $topic->produce(RD_KAFKA_PARTITION_UA, 0, json_encode($payload), $key, json_encode($rdkafka_headers));
             $this->producer->poll(0);
 
             return true;
